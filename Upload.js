@@ -3,7 +3,7 @@
 // Configuración de almacenamiento para multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads'); // Directorio donde se guardarán los archivos subidos
+        cb(null, 'Uploads'); // Directorio donde se guardarán los archivos subidos
     },
     filename: function (req, file, cb) {
         cb(null, `${Date.now()}-${file.originalname}`); // Nombre del archivo: fecha actual + nombre original del archivo

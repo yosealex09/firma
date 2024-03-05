@@ -2,10 +2,10 @@ import express from 'express';
 import { createTransport } from 'nodemailer';
 import path from 'path';
 import fs from 'fs';
-import multer, { memoryStorage } from 'multer';
+import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { PdfSigner } from 'sign-pdf-lib';
-import fsPromises from 'fs/promises';
+import { promises as fsPromises } from 'fs';
 import { PDFDocument } from 'pdf-lib';
 import nodeHtmlToImage from 'node-html-to-image';
 import bodyParser from 'body-parser';
@@ -13,8 +13,9 @@ import bodyParser from 'body-parser';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = 3000;
-const storage = memoryStorage();
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
 
 // Configurar EJS como motor de vista
 app.set('view engine', 'ejs');
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/publico', express.static(path.join(__dirname, 'publico')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
 
 // Crear un transporte SMTP
 const transporter = createTransport({
@@ -81,7 +83,7 @@ app.post('/enviar_correoSA', (req, res) => {
       from: 'jose.baez@sosya.cl',
       to: para,
       subject: 'No Reply/Firmar contrato',
-      html: `Este Link te dirije al portal donde puedes revisar tu contrato y firmarlo : http://localhost:3000/publico</p>`,
+      html: `Este Link te dirije al portal donde puedes revisar tu contrato y firmarlo : http://localhost:3000/formulario`,
       bcc: 'alexyose09@gmail.com'
       
     };
@@ -160,12 +162,12 @@ app.post('/firmar-pdf', async (req, res) => {
         const info = {
             pageNumber: totalPages,
             signature: { name: 'Yosember', reason: 'Prueba Firma', contactInfo: 'yosember.rodriguez@sosya.cl' },
-            visual: { background: await fsPromises.readFile('mylogo.jpg'), rectangle: { left: 150, top: 500, right: 350, bottom: 300 } }
+            visual: { background: await fsPromises.readFile('mylogo.jpg'), rectangle: { left: 0, top: 720, right: 400, bottom: 820 } }
         };
         const signedPdf = await pdfSigner.signAsync(pdfBytes, info);
         await fsPromises.writeFile(filePathVerify, signedPdf);
         console.log("El PDF ha sido firmado correctamente en la última página.");
-        res.status(200).send({ message: 'El PDF ha sido firmado correctamente' });
+        res.status(200).send({ message: 'El Documento ha sido firmado con exito. Haga click en "Siguiente" para Continuar' });
     } catch (error) {
         console.error('Error:', error);
         res.status(500).send({ error: 'Ocurrió un error al firmar el PDF' });
@@ -222,7 +224,7 @@ app.delete('/empleados/:id', (req, res) => {
     }
 });
 
-// Ruta para subir un archivo (requiere multer)
+// Ruta para subir un archivo (requiere multer) 
 app.post('/uploads', upload.single('file'), async (req, res) => {
     try {
         const fileContent = await fsPromises.readFile(req.file.path, 'binary');
@@ -284,7 +286,7 @@ app.post('/formulario', async (req, res) => {
         const imageBuffer = await convertirFormulario(nombre, rut, email);
         // Guardar la imagen en el servidor
         fs.writeFileSync('mylogo.jpg', imageBuffer);
-        res.send('¡Formulario procesado y guardado como imagen en el servidor!');
+        res.send('¡Firma Generada Exitosamente, Firme el Documento!');
     } catch (error) {
         console.error('Error al convertir el formulario:', error);
         res.status(500).send('Error al procesar el formulario.');
@@ -302,19 +304,25 @@ async function convertirFormulario(nombre, rut, email) {
         <style>
             body {
                 font-family: Arial, sans-serif;
-                font-size: 16px;
-                text-align: center;
+                font-size: 15px;
+                text-align: right;
             }
             .info {
-                margin-top: 20px;
+                
+                width: 350px; 
+                height: 80px;  
+                padding: 10px;
+                margin: 40px auto;
+                border: 1px solid #000;
+                text-align: center;
             }
         </style>
     </head>
     <body>
-             <div class="info">
-            <p><strong>Nombre:</strong> ${nombre}</p>
-            <p><strong>RUT:</strong> ${rut}</p>
-            <p><strong>Email:</strong> ${email}</p>
+             <div class="info" style="width: 350px; height: 100px;">
+            <p><strong></strong> ${nombre}</p>
+            <p><strong></strong> ${rut}</p>
+            <p><strong></strong> ${email}</p>
         </div>
     </body>
     </html>

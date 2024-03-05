@@ -73,7 +73,7 @@
 
         /* Estilos para botones */
         button {
-            background-color: #4CAF50;
+            background-color: #007bff;
             color: white;
             padding: 12px 24px;
             border: none;
@@ -119,7 +119,7 @@
     </div>
 
     <div id="pdfForm">
-        <h2>Formulario de Registro</h2>
+        <h2>Ingresar Datos de Firma</h2>
         <form id="registroForm">
             <div class="form-control">
                 <label for="nombre">Nombre Completo:</label>
@@ -136,7 +136,7 @@
             </div>
             <button type="button" id="convertirFormulario">Crear Firma</button> 
             <button type="button" id="firmarDocumento">Firmar Documento</button>
-
+            <div id="message"></div>
         </form>
     </div>
 
@@ -152,11 +152,19 @@
         document.addEventListener('DOMContentLoaded', () => {
     const pdfForm = document.getElementById('pdfForm');
     const messageDiv = document.getElementById('message');
+    const firmarDocumentoBtn = document.getElementById('firmarDocumento');
+    const siguienteBtn = document.getElementById('siguiente');
+
+    firmarDocumentoBtn.disabled = true;
+    siguienteBtn.disabled = true;
 
     document.getElementById('convertirFormulario').addEventListener('click', async () => {
         const nombre = document.getElementById('nombre').value;
         const rut = document.getElementById('rut').value;
         const email = document.getElementById('email').value;
+       
+
+        
 
         try {
             const response = await fetch('http://localhost:3000/formulario', {
@@ -170,6 +178,11 @@
             if (response.ok) {
                 const data = await response.text();
                 messageDiv.textContent = data;
+                document.getElementById('nombre').value = '';
+                document.getElementById('rut').value = '';
+                document.getElementById('email').value = '';
+                firmarDocumentoBtn.disabled = false;
+                siguienteBtn.disabled = false;
             } else {
                 const errorMessage = await response.text();
                 messageDiv.textContent = errorMessage || 'Error al procesar el formulario';
