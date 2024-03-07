@@ -26,6 +26,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 
+
 // Crear un transporte SMTP
 const transporter = createTransport({
     host: 'mail.sosya.cl',
@@ -350,6 +351,29 @@ function validarRut(rut) {
     // Implementa aquí la lógica de validación del RUT
     return true; // Temporalmente devuelve true para fines de prueba
 }
+
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    // Aquí deberías autenticar al usuario y verificar las credenciales
+    // Si la autenticación es exitosa, puedes responder con un código 200
+    // Si la autenticación falla, puedes responder con un código 401 (No autorizado) o 403 (Prohibido)
+    // Ejemplo simple:
+    if (email === 'usuario@example.com' && password === 'contraseña') {
+        res.sendStatus(200); // Autenticación exitosa
+    } else {
+        res.sendStatus(401); // Credenciales incorrectas
+    }
+});
+
+
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+    res.sendFile(__dirname + '/dashboard.html');
+});
+
 
 // Puerto en el que se ejecutará el servidor
 const PORT = process.env.PORT || 3000;

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .menu {
+            background-color: #333;
+            overflow: hidden;
+        }
+        .menu a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        .menu a:hover {
+            background-color: #555;
+        }
+        .content {
+            padding: 20px;
+        }
+        h2 {
+            color: #333;
+        }
+        .logout-btn {
+            float: right;
+            padding: 14px 16px;
+            color: white;
+            background-color: #d9534f;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .logout-btn:hover {
+            background-color: #c9302c;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        <a href="#home">Home</a>
+        <a href="#profile">Profile</a>
+        <a href="#settings">Settings</a>
+        <button class="logout-btn" onclick="logout()">Logout</button> <!-- Botón para cerrar sesión -->
+    </div>
+
+    <div class="content">
+        <h2>Welcome to Dashboard</h2>
+        <!-- Aquí puedes mostrar el contenido del dashboard -->
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Función para cerrar sesión
+        function logout() {
+            // Aquí puedes agregar el código para cerrar sesión, por ejemplo, redireccionar a la página de inicio de sesión
+            window.location.href = '/logout';
+        }
+    </script>
+</body>
+</html>
