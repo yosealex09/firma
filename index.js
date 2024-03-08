@@ -9,13 +9,14 @@ import { promises as fsPromises } from 'fs';
 import { PDFDocument } from 'pdf-lib';
 import nodeHtmlToImage from 'node-html-to-image';
 import bodyParser from 'body-parser';
+import session from 'express-session';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = 3000;
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-
+const validationCodes = new Map();
 
 // Configurar EJS como motor de vista
 app.set('view engine', 'ejs');
@@ -24,8 +25,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/publico', express.static(path.join(__dirname, 'publico')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.set('view engine', 'ejs');
 
-
+// Configurar middleware de sesiones
+app.use(session({
+    secret: 'secret_key', // Cambia esto por una clave secreta más segura
+    resave: false,
+    saveUninitialized: false
+}));
 
 // Crear un transporte SMTP
 const transporter = createTransport({
@@ -37,14 +44,44 @@ const transporter = createTransport({
     },
     tls: {
         rejectUnauthorized: false
-      }
+    }
 });
+
+// Middleware de autenticación
+const requireAuth = (req, res, next) => {
+    // Verificar si el usuario está autenticado
+    if (req.session.user) {
+        return next(); // Permitir el acceso
+    } else {
+        res.redirect('/login'); // Redirigir al usuario a la página de inicio de sesión si no está autenticado
+    }
+};
 
 // Manejador de errores global
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Algo salió mal!');
 });
+
+// Función para enviar el código de validación por correo electrónico
+function sendValidationCode(email, code) {
+    // Configurar las opciones del correo electrónico
+    const mailOptions = {
+        from: 'jose.baez@sosya.cl',
+        to: email,
+        subject: 'Código de Validación',
+        text: `Tu código de validación es: ${code}`
+    };
+
+    // Enviar el correo electrónico
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.log('Error al enviar el correo:', error);
+        } else {
+            console.log('Correo enviado:', info.response);
+        }
+    });
+}
 
 // GET /enviar-correo
 app.get('/', (req, res) => {
@@ -67,11 +104,12 @@ app.get('/', (req, res) => {
     });
   });
 
-  app.get('/enviar_correoSA', (req, res) => {
+// GET /enviar_correoSA
+app.get('/enviar_correoSA', (req, res) => {
     res.render('Enviar_correoSA.ejs');
-  });
+});
 
-// POST /enviar-correo-sin-adjunto
+// POST /enviar_correoSA
 app.post('/enviar_correoSA', (req, res) => {
     const { para, asunto, mensaje } = req.body;
   
@@ -99,7 +137,8 @@ app.post('/enviar_correoSA', (req, res) => {
         return res.render('enviar_correoSA.ejs'); // Renderizar la plantilla después de enviar el correo
       }
     });
-  });
+});
+
 // POST /enviar-correo
 app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
     const { para, asunto, mensaje } = req.body;
@@ -141,7 +180,7 @@ app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
         res.status(500).send('Error al enviar el correo');
       }
     });
-  });
+});
 
 // POST /firmar-pdf
 app.post('/firmar-pdf', async (req, res) => {
@@ -259,11 +298,14 @@ app.get('/formulario', (req, res) => {
     res.sendFile(path.join(__dirname, 'publico', 'index.html'));
 });
 
+
+
+
 // POST /formulario
 app.post('/formulario', async (req, res) => {
     console.log(req.body); // Verificar los datos del formulario recibidos
     const { nombre, rut, email } = req.body;
-    
+
     // Realizar las validaciones
     if (!nombre || !nombre.trim()) {
         return res.status(400).send('No ha ingresado el nombre.');
@@ -352,20 +394,6 @@ function validarRut(rut) {
     return true; // Temporalmente devuelve true para fines de prueba
 }
 
-app.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    // Aquí deberías autenticar al usuario y verificar las credenciales
-    // Si la autenticación es exitosa, puedes responder con un código 200
-    // Si la autenticación falla, puedes responder con un código 401 (No autorizado) o 403 (Prohibido)
-    // Ejemplo simple:
-    if (email === 'usuario@example.com' && password === 'contraseña') {
-        res.sendStatus(200); // Autenticación exitosa
-    } else {
-        res.sendStatus(401); // Credenciales incorrectas
-    }
-});
-
-
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
 });
@@ -374,6 +402,136 @@ app.get('/dashboard', (req, res) => {
     res.sendFile(__dirname + '/dashboard.html');
 });
 
+// POST /login
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    // Aquí deberías autenticar al usuario y verificar las credenciales
+    // Si la autenticación es exitosa, puedes responder con un código 200
+    // Si la autenticación falla, puedes responder con un código 401 (No autorizado) o 403 (Prohibido)
+    // Ejemplo simple:
+    if (email === 'usuario@example.com' && password === 'contraseña') {
+        // Autenticación exitosa
+        req.session.user = email; // Establecer una sesión para indicar que el usuario está autenticado
+        res.redirect('/dashboard'); // Redirigir al usuario al dashboard
+    } else {
+        res.sendStatus(401); // Credenciales incorrectas
+    }
+});
+
+// POST /solicitar-codigo
+app.post('/solicitar-codigo', async (req, res) => {
+    const { email } = req.body;
+    console.log('Correo electrónico del destinatario:', email);
+
+    // Generar un código de verificación aleatorio de 4 dígitos
+    const codigoVerificacion = Math.floor(1000 + Math.random() * 9000);
+    console.log(`Código de verificación generado para ${email}: ${codigoVerificacion}`);
+
+    validationCodes.set(email, codigoVerificacion);
+
+    // Aquí deberías enviar el código de verificación al correo electrónico del usuario
+    // Puedes utilizar nodemailer u otro servicio para enviar correos electrónicos
+    
+    const mailOptions = {
+        from: 'jose.baez@sosya.cl',
+        to: email,
+        subject: 'Código de Verificación',
+        text: `Su código de verificación es: ${codigoVerificacion}`
+    };
+
+    // Enviar el correo electrónico
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error('Error al enviar el correo:', error);
+            return res.status(500).send('Error al enviar el correo');
+        } else {
+            console.log('Correo de verificación enviado:', info.response);
+            // Envía una respuesta al cliente indicando que se ha enviado el código de verificación
+            res.status(200).send('Código de verificación enviado al correo electrónico.');
+        }
+    });
+});
+
+
+
+
+  //Ruta protegida que requiere código de validación
+  app.post('/ruta-protegida', validateCode, (req, res) => {
+    res.send('Acceso concedido');
+  });
+
+  // Middleware para validar el código de verificación
+function validateCode(req, res, next) {
+    const { code } = req.body;
+
+    // Busca el correo electrónico asociado al código
+    let email;
+    for (let [key, value] of validationCodes.entries()) {
+        if (value === parseInt(code)) {
+            email = key;
+            break;
+        }
+    }
+
+    if (email) {
+        // Código válido
+        console.log(`Código de verificación válido para el correo electrónico: ${email}`);
+        req.session.codigoVerificacionValido = true;
+        req.session.email = email;
+        next();
+        // Elimina el código de validación después de usarlo
+        validationCodes.delete(email);
+    } else {
+        // Código inválido
+        console.log('Código de verificación inválido');
+        console.log(`El código válido esperado es: ${validationCodes.get(email)}`);
+        res.status(401).send('Código de verificación inválido');
+    }
+}
+
+
+  // Ruta para mostrar el formulario de solicitud de código
+app.get('/solicitar-codigo', (req, res) => {
+    res.render('solicitarCodigo'); // Renderizar la vista 'solicitarCodigo.ejs'
+});
+
+app.get('/verificar-codigo', (req, res) => {
+    res.render('agregarCodigo');
+});
+/*
+app.get('/ruta-protegida', (req, res) => {
+    res.send('Esta es una ruta protegida');
+});
+  */
+// Middleware para validar el código de verificación
+
+
+app.post('/verificar-codigo', (req, res) => {
+    const { code } = req.body;
+
+    // Busca el correo electrónico asociado al código
+    let email;
+    for (let [key, value] of validationCodes.entries()) {
+        if (value === parseInt(code)) {
+            email = key;
+            break;
+        }
+    }
+
+    if (email) {
+        // Código válido
+        console.log(`Código de verificación válido para el correo electrónico: ${email}`);
+        res.status(200).json({ message: 'Código de verificación válido', email });
+        // Elimina el código de validación después de usarlo
+        validationCodes.delete(email);
+    } else {
+        // Código inválido
+        console.log('Código de verificación inválido');
+        console.log(`El código válido esperado es: ${validationCodes.get(email)}`);
+        res.status(401).send('Código de verificación inválido');
+    }
+});
+   
 
 // Puerto en el que se ejecutará el servidor
 const PORT = process.env.PORT || 3000;

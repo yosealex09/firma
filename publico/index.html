@@ -109,9 +109,41 @@
             font-size: 18px; /* Ajusta el tamaño del texto */
             margin: 10px; /* Espacio entre los botones */
         }
+
+        /* Estilos para el menú */
+        .menu {
+            background-color: #333;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .menu a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .logout-btn {
+            float: right;
+            padding: 14px 16px;
+            color: white;
+            background-color: #d9534f;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .menu a:hover {
+            background-color: #555;
+        }
     </style>
 </head>
 <body>
+ 
     <h1>Firma de Contrato</h1>
 
     <div id="pdfContainer">
