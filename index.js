@@ -122,7 +122,7 @@ app.post('/enviar_correoSA', (req, res) => {
       from: 'jose.baez@sosya.cl',
       to: para,
       subject: 'No Reply/Firmar contrato',
-      html: `Este Link te dirije al portal donde puedes revisar tu contrato y firmarlo : http://localhost:3000/formulario`,
+      html: `Este Link te dirije al portal donde puedes revisar tu contrato y firmarlo : http://localhost:3000/solicitar-codigo`,
       bcc: 'alexyose09@gmail.com'
       
     };
