@@ -26,6 +26,8 @@ app.use('/publico', express.static(path.join(__dirname, 'publico')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
 
 // Configurar middleware de sesiones
 app.use(session({
@@ -532,6 +534,76 @@ app.post('/verificar-codigo', (req, res) => {
     }
 });
    
+
+const dataFilePath = 'data.json';
+
+// Verificar si el archivo JSON existe, de lo contrario, inicializarlo con un array vacío
+if (!fs.existsSync(dataFilePath)) {
+    fs.writeFileSync(dataFilePath, '[]');
+}
+
+// Función para cargar los datos desde el archivo JSON
+function cargarDatos() {
+    const data = fs.readFileSync(dataFilePath);
+    return JSON.parse(data);
+}
+
+// Función para guardar los datos en el archivo JSON
+function guardarDatos(datos) {
+    fs.writeFileSync(dataFilePath, JSON.stringify(datos, null, 2));
+}
+
+/// Endpoint para solicitar nombre, apellido, número de teléfono y correo electrónico
+app.post('/ValidacionCorreo', (req, res) => {
+    const { nombre, apellido, telefono, correo } = req.body;
+
+    // Verificar si se proporcionaron todos los campos requeridos
+    if (!nombre || !apellido || !telefono || !correo) {
+        return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    }
+
+    // Configurar las opciones del correo electrónico
+    const mailOptions = {
+        from: 'jose.baez@sosya.cl',
+        to: correo,
+        subject: 'Validación de correo electrónico',
+        text: 'Validado correo electrónico con Exito'
+    };
+    // Enviar el correo electrónico de validación al correo proporcionado
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error('Error al enviar el correo electrónico:', error);
+            return res.status(500).json({ error: 'Error al enviar el correo electrónico' });
+        } else {
+            console.log('Correo electrónico enviado:', info.response);
+
+            // Cargar los datos actuales del archivo JSON
+            const datosActuales = cargarDatos();
+
+            // Generar un nuevo ID incrementado
+            const nuevoId = datosActuales.length > 0 ? datosActuales[datosActuales.length - 1].id + 1 : 1;
+
+            // Agregar los nuevos datos al array
+            const nuevosDatos = [...datosActuales, { id: nuevoId, nombre, apellido, telefono, correo }];
+
+            // Guardar los datos actualizados en el archivo JSON
+            guardarDatos(nuevosDatos);
+
+            return res.status(200).json({ message: 'Correo electrónico de validación enviado con Exito' });
+        }
+    });
+});
+
+
+app.get('/ValidacionCorreo', (req, res) => {
+    res.render('ValidacionCorreo'); // Renderizar la vista del formulario de registro
+});
+
+
+
+
+
+
 
 // Puerto en el que se ejecutará el servidor
 const PORT = process.env.PORT || 3000;
