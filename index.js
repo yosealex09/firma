@@ -215,35 +215,41 @@ app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
 // POST /firmar-pdf
 app.post('/firmar-pdf', async (req, res) => {
     try {
-        const filePath = 'publico/Contrato.pdf';
-        const filePathVerify = 'ContratoFirmado.pdf';
-        const pdfBytes = await fsPromises.readFile(filePath);
-        const pdfDoc = await PDFDocument.load(pdfBytes);
-        const totalPages = pdfDoc.getPageCount();
-        const settings = {
-            signatureLength: 4000 - 6,
-            rangePlaceHolder: 999999,
-            signatureComputer: {
-                certificate: await fsPromises.readFile('firma.p12'),
-                password: ''
-            }
-        };
-        const pdfSigner = new PdfSigner(settings);
-        const info = {
-            pageNumber: totalPages,
-            signature: { name: 'Yosember', reason: 'Prueba Firma', contactInfo: 'yosember.rodriguez@sosya.cl' },
-            visual: { background: await fsPromises.readFile('mylogo.jpg'), rectangle: { left: 0, top: 720, right: 400, bottom: 820 } }
-        };
-        const signedPdf = await pdfSigner.signAsync(pdfBytes, info);
-        await fsPromises.writeFile(filePathVerify, signedPdf);
-        console.log("El PDF ha sido firmado correctamente en la última página.");
-        res.status(200).send({ message: 'El Documento ha sido firmado con exito. Haga click en "Siguiente" para Continuar' });
+        // Obtener la lista de archivos PDF en la carpeta 'publico'
+        const fileNames = fs.readdirSync('publico').filter(file => file.endsWith('.pdf'));
+
+        
+        // Procesa cada archivo de la lista
+        for (let fileName of fileNames) {
+            const filePath = `publico/${fileName}`;
+            const filePathVerify = `Doc_firmado/${fileName.split('.pdf')[0]}_Firmado.pdf`; // Nombre del archivo firmado
+            const pdfBytes = await fsPromises.readFile(filePath);
+            const pdfDoc = await PDFDocument.load(pdfBytes);
+            const totalPages = pdfDoc.getPageCount();
+            const settings = {
+                signatureLength: 4000 - 6,
+                rangePlaceHolder: 999999,
+                signatureComputer: {
+                    certificate: await fsPromises.readFile('firma.p12'),
+                    password: ''
+                }
+            };
+            const pdfSigner = new PdfSigner(settings);
+            const info = {
+                pageNumber: totalPages,
+                signature: { name: 'Yosember', reason: 'Prueba Firma', contactInfo: 'yosember.rodriguez@sosya.cl' },
+                visual: { background: await fsPromises.readFile('mylogo.jpg'), rectangle: { left: 0, top: 720, right: 400, bottom: 820 } }
+            };
+            const signedPdf = await pdfSigner.signAsync(pdfBytes, info);
+            await fsPromises.writeFile(filePathVerify, signedPdf);
+            console.log(`El PDF ${fileName} ha sido firmado correctamente en la última página.`);
+        }
+        res.status(200).send({ message: 'Los documentos han sido firmados con éxito' });
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).send({ error: 'Ocurrió un error al firmar el PDF' });
+        res.status(500).send({ error: 'Ocurrió un error al firmar los PDFs' });
     }
 });
-
 // Empleados
 let empleados = [];
 
@@ -621,10 +627,24 @@ app.post('/ValidacionCorreo', (req, res) => {
 });
 
 
+
 app.get('/ValidacionCorreo', (req, res) => {
     res.render('ValidacionCorreo'); // Renderizar la vista del formulario de registro
 });
 
+// Ruta para obtener la lista de archivos PDF en la carpeta 'publico'
+app.get('/lista-pdf', (req, res) => {
+    const directorio = path.join(__dirname, 'publico');
+    fs.readdir(directorio, (err, files) => {
+        if (err) {
+            console.error('Error al leer el directorio:', err);
+            res.status(500).json({ error: 'Error al obtener la lista de archivos PDF' });
+        } else {
+            const pdfFiles = files.filter(file => path.extname(file).toLowerCase() === '.pdf');
+            res.json(pdfFiles);
+        }
+    });
+});
 
 
 
