@@ -106,41 +106,69 @@ app.get('/', (req, res) => {
     });
   });
 
-// GET /enviar_correoSA
+// Ruta para cargar la página y mostrar la lista de correos
 app.get('/enviar_correoSA', (req, res) => {
-    res.render('Enviar_correoSA.ejs');
+    // Obtener los datos de correos desde el archivo JSON
+    const correos = JSON.parse(fs.readFileSync('data.json', 'utf8'));
+
+    // Renderizar la vista 'Enviar_correoSA.ejs' con los datos de correos
+    res.render('Enviar_correoSA', { correos: correos });
 });
 
-// POST /enviar_correoSA
+// Ruta para enviar correo a múltiples destinatarios obtenidos de data.json
 app.post('/enviar_correoSA', (req, res) => {
-    const { para, asunto, mensaje } = req.body;
-  
-    if (!para) {
-      return res.render('enviar_correoSA.ejs', { error: 'No se proporcionó ninguna dirección de correo electrónico.' });
-    }
-  
-    // Configurar las opciones del correo electrónico
-    const mailOptions = {
-      from: 'jose.baez@sosya.cl',
-      to: para,
-      subject: 'No Reply/Firmar contrato',
-      html: `Este Link te dirije al portal donde puedes revisar tu contrato y firmarlo : http://localhost:3000/solicitar-codigo`,
-      bcc: 'alexyose09@gmail.com'
-      
-    };
-  
-    // Enviar el correo electrónico
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log('Error al enviar el correo:', error);
+    try {
+        // Cargar usuarios desde data.json
+        const usuarios = cargarUsuariosDesdeJSON();
+
+        // Verificar que se cargaron usuarios
+        if (usuarios.length === 0) {
+            return res.status(500).send('No se pudieron cargar los usuarios desde data.json');
+        }
+
+        // Obtener las direcciones de correo electrónico de los usuarios
+        const destinatarios = usuarios.map(usuario => usuario.correo);
+
+        // Configurar las opciones del correo electrónico
+        const mailOptions = {
+            from: 'jose.baez@sosya.cl',
+            to: destinatarios.join(', '), // Unir las direcciones de correo con comas
+            subject: 'Asunto del correo',
+            text: 'Ingrese al link para validar sus datos : http://localhost:3000/ValidacionCorreo',
+            bcc: 'alexyose09@gmail.com'
+        };
+
+        // Enviar el correo electrónico
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error('Error al enviar el correo:', error);
+                return res.status(500).send('Error al enviar el correo');
+            } else {
+                console.log('Correo enviado:', info.response);
+                return res.send('Correo enviado correctamente');
+            }
+        });
+    } catch (error) {
+        console.error('Error al enviar el correo:', error);
         return res.status(500).send('Error al enviar el correo');
-      } else {
-        console.log('Correo enviado:', info.response);
-        return res.render('enviar_correoSA.ejs'); // Renderizar la plantilla después de enviar el correo
-      }
-    });
+    }
 });
 
+// Función para cargar los usuarios desde el archivo JSON
+function cargarUsuariosDesdeJSON() {
+    try {
+        // Lee el contenido del archivo data.json
+        const usuariosJson = fs.readFileSync('data.json', 'utf8');
+        
+        // Parsea el contenido a un objeto JavaScript
+        const usuarios = JSON.parse(usuariosJson);
+        
+        return usuarios;
+    } catch (error) {
+        console.error('Error al cargar los usuarios desde el archivo JSON:', error);
+        return []; // Retorna un arreglo vacío en caso de error
+    }
+}
 // POST /enviar-correo
 app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
     const { para, asunto, mensaje } = req.body;
@@ -506,8 +534,6 @@ app.get('/ruta-protegida', (req, res) => {
 });
   */
 // Middleware para validar el código de verificación
-
-
 app.post('/verificar-codigo', (req, res) => {
     const { code } = req.body;
 
@@ -533,7 +559,7 @@ app.post('/verificar-codigo', (req, res) => {
         res.status(401).send('Código de verificación inválido');
     }
 });
-   
+
 
 const dataFilePath = 'data.json';
 
@@ -567,7 +593,7 @@ app.post('/ValidacionCorreo', (req, res) => {
         from: 'jose.baez@sosya.cl',
         to: correo,
         subject: 'Validación de correo electrónico',
-        text: 'Validado correo electrónico con Exito'
+        text: 'Validado correo electrónico con Exito, ingrsar al link para continuar: http://localhost:3000/solicitar-codigo'
     };
     // Enviar el correo electrónico de validación al correo proporcionado
     transporter.sendMail(mailOptions, (error, info) => {

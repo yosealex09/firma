@@ -12,5 +12,19 @@
     "apellido": "baez",
     "telefono": "949169410",
     "correo": "jose.baez@sosya.cl"
+  },
+  {
+    "id": 3,
+    "nombre": "Yosember",
+    "apellido": "Rodriguez",
+    "telefono": "979985605",
+    "correo": "yosember.rodriguez@sosya.cl"
+  },
+  {
+    "id": 4,
+    "nombre": "Yosember",
+    "apellido": "Rodriguez",
+    "telefono": "979985605",
+    "correo": "yosealex09@gmail.com"
   }
 ]
