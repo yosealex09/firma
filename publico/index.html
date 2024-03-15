@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firma de Contratos</title>
+    <title>Firma de Documentos</title>
     <style>
         body {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -23,25 +23,41 @@
             width: 100%;
         }
 
-        /* Estilos para la lista de archivos PDF */
-        #pdfList {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
+        
+       /* Estilos para la lista de archivos PDF */
+       #pdfListContainer {
+            width: 90%;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-gap: 20px;
         }
 
-        .pdf-btn {
-            margin: 10px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
+        #titleContainer {
+            text-align: center; /* Alinea el texto al centro */
+            grid-column: span 2; /* Estira el contenedor del título para ocupar dos columnas */
+         }
+
+        #titleContainer h2 {
+            margin-top: 0; /* Elimina el margen superior para el título */
+        }   
+
+        .pdf-link {
+            display: block;
+            margin-bottom: 10px;
+            padding: 10px;
+            color: rgb(0, 0, 0);
+            text-decoration: none;
             border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
             transition: background-color 0.3s ease;
         }
+
+                       
 
         .pdf-btn:hover {
             background-color: #45a049;
@@ -107,7 +123,7 @@
 
         input[type="text"],
         input[type="email"] {
-            width: 100%;
+            width: 95%;
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -159,7 +175,14 @@
     <h1>Firma de Documentos</h1>
 
     <!-- Lista de archivos PDF -->
-    <div id="pdfList"></div>
+    <div id="pdfListContainer">
+        <div id="titleContainer">
+            <h2>Lista de Documentos por Firmar</h2>
+            <h6>Selecciona el documento que quieras revisar antes de firmar</h6>
+        </div>
+        <ol id="pdfList" style="list-style-type: decimal;"></ol>
+    </div>
+    
 
     <!-- Contenedor para mostrar el PDF -->
     <div id="pdfContainer" style="display: none;">
@@ -190,14 +213,14 @@
 
     <!-- Botones de Cancelar, Siguiente y Firmar -->
     <div id="botones-final">
-        <button type="button" id="cancelar">Cancelar</button>
+        
         <button type="button" id="siguiente">Siguiente</button>
     </div>
 
     <div id="message"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+       document.addEventListener('DOMContentLoaded', async () => {
             const pdfListContainer = document.getElementById('pdfList');
             const pdfContainer = document.getElementById('pdfContainer');
             const pdfViewer = document.getElementById('pdfViewer');
@@ -207,15 +230,18 @@
                 const response = await fetch('/lista-pdf');
                 if (response.ok) {
                     const pdfFiles = await response.json();
-                    pdfFiles.forEach(pdfFile => {
-                        const pdfBtn = document.createElement('button');
-                        pdfBtn.classList.add('pdf-btn');
-                        pdfBtn.textContent = pdfFile;
-                        pdfBtn.addEventListener('click', async () => {
+                    pdfFiles.forEach((pdfFile, index) => {
+                        const pdfLink = document.createElement('a');
+                        pdfLink.classList.add('pdf-link');
+                        pdfLink.textContent = pdfFile;
+                        pdfLink.href = '#';
+                        pdfLink.addEventListener('click', async () => {
                             pdfContainer.style.display = 'block';
                             pdfViewer.src = `/publico/${pdfFile}`;
                         });
-                        pdfListContainer.appendChild(pdfBtn);
+                        const listItem = document.createElement('li');
+                        listItem.appendChild(pdfLink);
+                        pdfListContainer.appendChild(listItem);
                     });
                 } else {
                     console.error('Error al obtener la lista de archivos PDF');
