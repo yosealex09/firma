@@ -10,6 +10,7 @@ import { PDFDocument } from 'pdf-lib';
 import nodeHtmlToImage from 'node-html-to-image';
 import bodyParser from 'body-parser';
 import session from 'express-session';
+import './database/connection.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
