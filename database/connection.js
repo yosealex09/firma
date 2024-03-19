@@ -33,5 +33,4 @@ async function getConnection() {
         console.log('Error en la conexión a la base de datos', error);
     }
     }
-
-getConnection();
+ export { getConnection };

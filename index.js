@@ -10,7 +10,9 @@ import { PDFDocument } from 'pdf-lib';
 import nodeHtmlToImage from 'node-html-to-image';
 import bodyParser from 'body-parser';
 import session from 'express-session';
-import './database/connection.js';
+import { getConnection } from  './database/connection.js';
+import os from 'os';
+import sql from 'mssql'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -18,6 +20,11 @@ const port = 3000;
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const validationCodes = new Map();
+
+
+
+
+
 
 // Configurar EJS como motor de vista
 app.set('view engine', 'ejs');
@@ -36,6 +43,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false
 }));
+app.use(express.json());
 
 // Crear un transporte SMTP
 const transporter = createTransport({
@@ -107,28 +115,44 @@ app.get('/', (req, res) => {
     });
   });
 
-// Ruta para cargar la página y mostrar la lista de correos
-app.get('/enviar_correoSA', (req, res) => {
-    // Obtener los datos de correos desde el archivo JSON
-    const correos = JSON.parse(fs.readFileSync('data.json', 'utf8'));
-
-    // Renderizar la vista 'Enviar_correoSA.ejs' con los datos de correos
-    res.render('Enviar_correoSA', { correos: correos });
-});
-
-// Ruta para enviar correo a múltiples destinatarios obtenidos de data.json
-app.post('/enviar_correoSA', (req, res) => {
+  app.get('/enviar_correoSA', async (req, res) => {
     try {
-        // Cargar usuarios desde data.json
-        const usuarios = cargarUsuariosDesdeJSON();
+        // Consultar la tabla Usuarios desde la base de datos
+        const pool = await getConnection(); // Configurar la conexión a tu base de datos 
 
-        // Verificar que se cargaron usuarios
-        if (usuarios.length === 0) {
-            return res.status(500).send('No se pudieron cargar los usuarios desde data.json');
+        const result = await pool.request().query('SELECT Correo_Personal FROM Usuarios');
+
+        // Verificar que se obtuvieron registros de usuarios
+        if (result.recordset.length === 0) {
+            return res.status(500).send('No se encontraron usuarios en la base de datos');
         }
 
-        // Obtener las direcciones de correo electrónico de los usuarios
-        const destinatarios = usuarios.map(usuario => usuario.correo);
+        // Obtener los correos personales de los usuarios
+        const correos = result.recordset.map(Usuario => Usuario.Correo_Personal);
+
+        // Renderizar la vista 'Enviar_correoSA.ejs' con los datos de correos
+        res.render('Enviar_correoSA', { correos: correos });
+    } catch (error) {
+        console.error('Error al obtener los correos de usuarios:', error);
+        return res.status(500).send('Error al obtener los correos de usuarios');
+    }
+});;
+
+/// Ruta para enviar correo a múltiples destinatarios obtenidos de la tabla Empleado
+app.post('/enviar_correoSA', async (req, res) => {
+    try {
+        // Consultar la tabla Empleado desde la base de datos
+        const pool = await getConnection(); // Configurar la conexión a tu base de datos 
+
+        const result = await pool.request().query('SELECT Correo_Personal FROM Empleado');
+
+        // Verificar que se obtuvieron registros de empleados
+        if (result.recordset.length === 0) {
+            return res.status(500).send('No se encontraron empleados en la base de datos');
+        }
+
+        // Obtener las direcciones de correo electrónico de los empleados
+        const destinatarios = result.recordset.map(empleado => empleado.Correo_Personal);
 
         // Configurar las opciones del correo electrónico
         const mailOptions = {
@@ -213,46 +237,6 @@ app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
     });
 });
 
-// POST /firmar-pdf
-app.post('/firmar-pdf', async (req, res) => {
-    try {
-        // Obtener la lista de archivos PDF en la carpeta 'publico'
-        const fileNames = fs.readdirSync('publico').filter(file => file.endsWith('.pdf'));
-
-        
-        // Procesa cada archivo de la lista
-        for (let fileName of fileNames) {
-            const filePath = `publico/${fileName}`;
-            const filePathVerify = `Doc_firmado/${fileName.split('.pdf')[0]}_Firmado.pdf`; // Nombre del archivo firmado
-            const pdfBytes = await fsPromises.readFile(filePath);
-            const pdfDoc = await PDFDocument.load(pdfBytes);
-            const totalPages = pdfDoc.getPageCount();
-            const settings = {
-                signatureLength: 4000 - 6,
-                rangePlaceHolder: 999999,
-                signatureComputer: {
-                    certificate: await fsPromises.readFile('firma.p12'),
-                    password: ''
-                }
-            };
-            const pdfSigner = new PdfSigner(settings);
-            const info = {
-                pageNumber: totalPages,
-                signature: { name: 'Yosember', reason: 'Prueba Firma', contactInfo: 'yosember.rodriguez@sosya.cl' },
-                visual: { background: await fsPromises.readFile('mylogo.jpg'), rectangle: { left: 0, top: 720, right: 400, bottom: 820 } }
-            };
-            const signedPdf = await pdfSigner.signAsync(pdfBytes, info);
-            await fsPromises.writeFile(filePathVerify, signedPdf);
-            console.log(`El PDF ${fileName} ha sido firmado correctamente en la última página.`);
-        }
-        res.status(200).send({ message: 'Los documentos han sido firmados con éxito' });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).send({ error: 'Ocurrió un error al firmar los PDFs' });
-    }
-});
-// Empleados
-let empleados = [];
 
 // Ruta para obtener todos los empleados
 app.get('/empleados', (req, res) => {
@@ -336,7 +320,7 @@ app.get('/formulario', (req, res) => {
 });
 
 
-
+let nombreFormulario = '';
 
 // POST /formulario
 app.post('/formulario', async (req, res) => {
@@ -361,11 +345,13 @@ app.post('/formulario', async (req, res) => {
         return res.status(400).send('El RUT ingresado no es válido.');
     }
 
+
+    nombreFormulario = nombre;
     // Convertir el formulario a imagen
     try {
-        const imageBuffer = await convertirFormulario(nombre, rut, email);
+        const nombreFormulario = await convertirFormulario(nombre, rut, email);
         // Guardar la imagen en el servidor
-        fs.writeFileSync('mylogo.jpg', imageBuffer);
+        
         res.send('¡Firma Generada Exitosamente, Firme el Documento!');
     } catch (error) {
         console.error('Error al convertir el formulario:', error);
@@ -416,9 +402,33 @@ try {
             fontColor: '#000',
             backgroundColor: '#fff'
         }
-    });
-    // Devolver la imagen en formato de buffer
-    return imageBuffer;
+    }) 
+    
+// Obtener la dirección IP del equipo
+const ipAddress = getLocalIPAddress();
+console.log('Dirección IP:', ipAddress); // Mostrar la dirección IP por consola
+
+// Generar el nombre de la imagen con la dirección IP
+const imageName = `Firma_${ipAddress.replace(/\./g, '_')}_${nombre}.jpg`;
+
+
+    
+    // Guardar la imagen en el directorio de imágenes
+    fs.writeFileSync(`Uploads/${imageName}`, imageBuffer);
+    // Guardar una copia de la imagen en el directorio raíz con el nombre "mylogo.jpg"
+    fs.writeFileSync(`mylogo.jpg`, imageBuffer);
+
+
+    // Guardar los datos en la base de datos
+    const pool = await getConnection();
+    const query = `
+        INSERT INTO Firma (Nombre, Rut, Correo, Imagen)
+        VALUES ('${nombre}', '${rut}', '${email}', '${imageName}')
+    `;
+    await pool.request().query(query);
+    
+    // Devolver el nombre de la imagen generada
+    return imageName;
 } catch (error) {
     console.error('Error al convertir el formulario:', error);
     throw new Error('Error al convertir el formulario.');
@@ -430,6 +440,85 @@ function validarRut(rut) {
     // Implementa aquí la lógica de validación del RUT
     return true; // Temporalmente devuelve true para fines de prueba
 }
+
+
+function getLocalIPAddress() {
+    const interfaces = os.networkInterfaces();
+    for (const interfaceName of Object.keys(interfaces)) {
+        for (const iface of interfaces[interfaceName]) {
+            // Filtrar direcciones IPv4 privadas
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'No se pudo obtener la dirección IP';
+}
+
+
+// POST /firmar-pdf
+app.post('/firmar-pdf', upload.none(), async (req, res) => {
+    try {
+        // Obtener la lista de archivos PDF en la carpeta 'publico'
+        const fileNames = fs.readdirSync('publico').filter(file => file.endsWith('.pdf'));
+
+        // Obtener la última dirección IP utilizada
+        const lastIPAddress = getLocalIPAddress();
+
+        // Variable para verificar si hubo un error durante el proceso de firma de los PDF
+        let errorOccurred = false;
+
+        // Procesa cada archivo de la lista
+        for (let fileName of fileNames) {
+            console.log('Nombre del formulario:', nombreFormulario); // Acceder al nombre del formulario aquí
+            const filePath = `publico/${fileName}`;
+            const nombre = fileName.split('.pdf')[0]; // Nombre original del archivo PDF
+            const filePathVerify = `Doc_firmado/${nombre}_${nombreFormulario}_Firmado.pdf`; // Nombre del archivo firmado
+            const pdfBytes = await fsPromises.readFile(filePath);
+            const pdfDoc = await PDFDocument.load(pdfBytes);
+            const totalPages = pdfDoc.getPageCount();
+            const settings = {
+                signatureLength: 4000 - 6,
+                rangePlaceHolder: 999999,
+                signatureComputer: {
+                    certificate: await fsPromises.readFile('firma.p12'),
+                    password: ''
+                }
+            };
+            const pdfSigner = new PdfSigner(settings);
+            const info = {
+                pageNumber: totalPages,
+                signature: { name: 'Yosember', reason: 'Prueba Firma', contactInfo: 'yosember.rodriguez@sosya.cl' },
+                visual: { background: await fsPromises.readFile(`Uploads/Firma_${lastIPAddress.replace(/\./g, '_')}_${nombreFormulario}.jpg`), rectangle: { left: 0, top: 720, right: 400, bottom: 820 } }
+            };
+
+            const signedPdf = await pdfSigner.signAsync(pdfBytes, info);
+            await fsPromises.writeFile(filePathVerify, signedPdf);
+            console.log(`El PDF ${fileName} ha sido firmado correctamente en la última página.`);
+
+            // Insertar datos en la tabla Documento de la base de datos
+            const pool = await getConnection(); // Configurar la conexión a tu base de datos
+            const query = `
+                INSERT INTO Documento (Nombre_Documento, TipoDocumento, Cantidad, Ruta, Fecha_Firma, Emisor_id, Empleado_id)
+                VALUES ('${filePathVerify}', 'PDF', 1, '${filePathVerify}', GETDATE(), null, null)
+            `;
+            await pool.request().query(query);
+        }
+
+        // Si no hubo errores durante el proceso, enviar respuesta exitosa al cliente
+        if (!errorOccurred) {
+            res.status(200).send({ message: 'Los documentos han sido firmados con éxito' });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).send({ error: 'Ocurrió un error al firmar los PDFs' });
+    }
+});
+
+// Empleados
+let empleados = [];
+
+
 
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'login.html'));
@@ -568,26 +657,10 @@ app.post('/verificar-codigo', (req, res) => {
 });
 
 
-const dataFilePath = 'data.json';
 
-// Verificar si el archivo JSON existe, de lo contrario, inicializarlo con un array vacío
-if (!fs.existsSync(dataFilePath)) {
-    fs.writeFileSync(dataFilePath, '[]');
-}
-
-// Función para cargar los datos desde el archivo JSON
-function cargarDatos() {
-    const data = fs.readFileSync(dataFilePath);
-    return JSON.parse(data);
-}
-
-// Función para guardar los datos en el archivo JSON
-function guardarDatos(datos) {
-    fs.writeFileSync(dataFilePath, JSON.stringify(datos, null, 2));
-}
 
 /// Endpoint para solicitar nombre, apellido, número de teléfono y correo electrónico
-app.post('/ValidacionCorreo', (req, res) => {
+app.post('/ValidacionCorreo', async(req, res) => {
     const { nombre, apellido, telefono, correo } = req.body;
 
     // Verificar si se proporcionaron todos los campos requeridos
@@ -595,37 +668,37 @@ app.post('/ValidacionCorreo', (req, res) => {
         return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
 
-    // Configurar las opciones del correo electrónico
-    const mailOptions = {
-        from: 'jose.baez@sosya.cl',
-        to: correo,
-        subject: 'Validación de correo electrónico',
-        text: 'Validado correo electrónico con Exito, ingrsar al link para continuar: http://localhost:3000/solicitar-codigo'
-    };
-    // Enviar el correo electrónico de validación al correo proporcionado
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.error('Error al enviar el correo electrónico:', error);
-            return res.status(500).json({ error: 'Error al enviar el correo electrónico' });
+    // Establecer conexión a la base de datos
+    const pool = await getConnection();
+
+    try {
+        // Verificar si se estableció la conexión
+        if (pool) {
+            // Consulta SQL para insertar datos en la tabla UsuarioVal
+            const query = `
+                INSERT INTO UsuarioVal (Nombre, Apellido, Correo_empresa, Telefono)
+                VALUES ('${nombre}', '${apellido}', '${correo}', '${telefono}')
+            `;
+
+            // Ejecutar la consulta
+            await pool.request().query(query);
+
+            // Enviar respuesta de éxito
+            return res.status(200).json({ message: 'Datos guardados en la base de datos con éxito' });
         } else {
-            console.log('Correo electrónico enviado:', info.response);
-
-            // Cargar los datos actuales del archivo JSON
-            const datosActuales = cargarDatos();
-
-            // Generar un nuevo ID incrementado
-            const nuevoId = datosActuales.length > 0 ? datosActuales[datosActuales.length - 1].id + 1 : 1;
-
-            // Agregar los nuevos datos al array
-            const nuevosDatos = [...datosActuales, { id: nuevoId, nombre, apellido, telefono, correo }];
-
-            // Guardar los datos actualizados en el archivo JSON
-            guardarDatos(nuevosDatos);
-
-            return res.status(200).json({ message: 'Correo electrónico de validación enviado con Exito' });
+            // Si la conexión no se estableció, enviar error
+            return res.status(500).json({ error: 'Error en la conexión a la base de datos' });
         }
-    });
+    } catch (error) {
+        // Si ocurre algún error durante la consulta, enviar error
+        console.error('Error al ejecutar la consulta SQL:', error);
+        return res.status(500).json({ error: 'Error al ejecutar la consulta SQL' });
+    } finally {
+        // Cerrar la conexión a la base de datos
+        pool.close();
+    }
 });
+
 
 
 

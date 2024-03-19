@@ -58,14 +58,12 @@
 </head>
 <body>
   <form action="/enviar_correoSA" method="POST">
-    <h1>
-      Confirmación de Correo
-    </h1>
+    <h1>Enviar Correo SA</h1>
+    <p>Lista de correos:</p>
     <ul>
-      <!-- Aquí se mostrará la lista de correos cargados -->
-      <% correos.forEach((usuario, index) => { %>
-        <li><%= index + 1 %>. <%= usuario.correo %></li>
-      <% }); %>
+        <% correos.forEach(empleado => { %>
+            <li><%= empleado.Nombre %> <%= empleado.Apellido %> - <%= empleado.Correo_Personal %></li>
+        <% }); %>
     </ul>
     <button type="submit">Enviar Correo</button>
   </form>
