@@ -59,13 +59,16 @@
 <body>
   <form action="/enviar_correoSA" method="POST">
     <h1>Enviar Correo SA</h1>
-    <p>Lista de correos:</p>
+    <!-- <label for="correo">Correo</label>
     <ul>
-        <% correos.forEach(empleado => { %>
-            <li><%= empleado.Nombre %> <%= empleado.Apellido %> - <%= empleado.Correo_Personal %></li>
+        <% correos.forEach(Empleado => { %>
+            <li><%= Empleado.Nombre %> <%= Empleado.Apellido %> - <%= Empleado.Correo_Personal %></li>
         <% }); %>
     </ul>
+    !-->
     <button type="submit">Enviar Correo</button>
   </form>
 </body>
 </html>
+
+

@@ -120,7 +120,7 @@ app.get('/', (req, res) => {
         // Consultar la tabla Usuarios desde la base de datos
         const pool = await getConnection(); // Configurar la conexión a tu base de datos 
 
-        const result = await pool.request().query('SELECT Correo_Personal FROM Usuarios');
+        const result = await pool.request().query('SELECT Correo_Personal FROM Empleado');
 
         // Verificar que se obtuvieron registros de usuarios
         if (result.recordset.length === 0) {
@@ -128,10 +128,10 @@ app.get('/', (req, res) => {
         }
 
         // Obtener los correos personales de los usuarios
-        const correos = result.recordset.map(Usuario => Usuario.Correo_Personal);
+        const correos = result.recordset.map(Empleado => Empleado.Correo_Personal);
 
         // Renderizar la vista 'Enviar_correoSA.ejs' con los datos de correos
-        res.render('Enviar_correoSA', { correos: correos });
+        res.render('enviar_correoSA', { correos: correos });
     } catch (error) {
         console.error('Error al obtener los correos de usuarios:', error);
         return res.status(500).send('Error al obtener los correos de usuarios');
@@ -152,7 +152,7 @@ app.post('/enviar_correoSA', async (req, res) => {
         }
 
         // Obtener las direcciones de correo electrónico de los empleados
-        const destinatarios = result.recordset.map(empleado => empleado.Correo_Personal);
+        const destinatarios = result.recordset.map(Empleado => Empleado.Correo_Personal);
 
         // Configurar las opciones del correo electrónico
         const mailOptions = {
