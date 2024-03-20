@@ -26,6 +26,8 @@ const validationCodes = new Map();
 
 
 
+
+
 // Configurar EJS como motor de vista
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -95,25 +97,32 @@ function sendValidationCode(email, code) {
 }
 
 // GET /enviar-correo
-app.get('/', (req, res) => {
-    // Ruta del archivo adjunto
-    const filePath = 'ContratoFirmado.pdf'; // Ruta del archivo que deseas adjuntar
-  
-    // Leer el archivo adjunto
-    fs.readFile(filePath, (err, data) => {
-      if (err) {
-        console.error('Error al leer el archivo adjunto:', err);
-        res.status(500).send('Error al leer el archivo adjunto');
-        return;
-      }
-  
-      // Convertir el contenido del archivo a Base64
-      const base64Data = Buffer.from(data).toString('base64');
-  
-      // Renderizar el formulario HTML y pasar el archivo adjunto como variable
-      res.render('enviar_correo.ejs', { adjunto: { originalname: 'ContratoFirmado.pdf' } });
+app.get('/', (_, res) => {
+    // Ruta del directorio que contiene los archivos adjuntos
+    const directoryPath = path.join(__dirname, 'Doc_firmado');
+
+    // Obtener la IP local del equipo actual
+    const ipAddress = getLocalIpAddress();
+
+    // Leer los archivos en el directorio
+    fs.readdir(directoryPath, (err, files) => {
+        if (err) {
+            console.error('Error al leer el directorio:', err);
+            res.status(500).send('Error al leer el directorio');
+            return;
+        }
+
+        // Filtrar los archivos que fueron creados con la misma IP
+        const filteredFiles = files.filter(file => {
+            const fileStats = fs.statSync(path.join(directoryPath, file));
+            const fileCreatedByIp = fileStats.birthtimeMs;
+            return fileCreatedByIp === ipAddress;
+        });
+
+        // Mostrar la lista de archivos adjuntos en la respuesta
+        res.render('enviar_correo.ejs', {adjunto : { adjuntos: filteredFiles }});
     });
-  });
+});
 
   app.get('/enviar_correoSA', async (req, res) => {
     try {
@@ -194,48 +203,80 @@ function cargarUsuariosDesdeJSON() {
         return []; // Retorna un arreglo vacío en caso de error
     }
 }
+let para = '';
 // POST /enviar-correo
 app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
     const { para, asunto, mensaje } = req.body;
     const adjunto = req.file;
-  
-    // Ruta del archivo adjunto
-    const filePath = 'ContratoFirmado.pdf'; // Ruta del archivo que deseas adjuntar
-  
-    // Leer el archivo adjunto
-    fs.readFile(filePath, async (err, data) => {
-      if (err) {
-        console.error('Error al leer el archivo adjunto:', err);
-        res.status(500).send('Error al leer el archivo adjunto');
-        return;
-      }
-  
-      try {
-        // Configurar las opciones del correo electrónico
-        const mailOptions = {
-          from: 'jose.baez@sosya.cl',
-          to: para,
-          subject: 'Contrato Firmado',
-          html: `<p>${mensaje}</p><p>Adjunto encontrarás el archivo: ContratoFirmado.pdf</p>`,
-          attachments: [
-            {
-              filename: 'ContratoFirmado.pdf',
-              content: data
-            }
-          ],
-          bcc: 'alexyose09@gmail.com'
-        };
-  
-        // Enviar el correo electrónico
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Correo enviado: ' + info.response);
-        res.send('Correo enviado correctamente');
-      } catch (error) {
-        console.log('Error al enviar el correo:', error);
-        res.status(500).send('Error al enviar el correo');
-      }
+    
+
+    console.log('Solicitud POST recibida. Datos del formulario:');
+    console.log('Para:', para);
+    console.log('Asunto:', asunto);
+    console.log('Mensaje:', mensaje);
+
+    // Obtener la dirección IP local del equipo actual
+    const ipAddress = getLocalIpAddress();
+    console.log('Dirección IP local:', ipAddress);
+
+    // Ruta de la carpeta que contiene los documentos firmados
+    const folderPath = path.join(__dirname, 'Doc_firmado');
+
+    // Leer los archivos de la carpeta y enviarlos como adjuntos en el correo electrónico
+    fs.readdir(folderPath, async (err, files) => {
+        if (err) {
+            console.error('Error al leer la carpeta de documentos firmados:', err);
+            res.status(500).send('Error al leer la carpeta de documentos firmados');
+            return;
+        }
+
+        console.log('Archivos encontrados en la carpeta de documentos firmados:', files);
+
+
+       
+        try {
+            // Configurar las opciones del correo electrónico
+            const mailOptions = {
+                from: 'jose.baez@sosya.cl',
+                to: para,
+                subject: 'Contrato Firmado',
+                html: `<p>${mensaje}</p><p>Adjunto encontrarás el archivo: ContratoFirmado.pdf</p>`,
+                attachments: files.map(file => ({
+                    filename: file,
+                    path: path.join(folderPath, file)
+                })),
+                bcc: 'alexyose09@gmail.com'
+            };
+
+            console.log('Opciones del correo electrónico:', mailOptions);
+
+            // Enviar el correo electrónico
+            const info = await transporter.sendMail(mailOptions);
+            console.log('Correo enviado:', info.response);
+            res.send('Correo enviado correctamente');
+        } catch (error) {
+            console.error('Error al enviar el correo:', error);
+            res.status(500).send('Error al enviar el correo');
+        }
     });
 });
+
+
+// Función para obtener la dirección IP local del equipo actual
+function getLocalIpAddress() {
+    const ifaces = os.networkInterfaces();
+    let ipAddress = '';
+
+    Object.keys(ifaces).forEach(ifname => {
+        ifaces[ifname].forEach(iface => {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                ipAddress = iface.address;
+            }
+        });
+    });
+
+    return ipAddress;
+}
 
 
 // Ruta para obtener todos los empleados
@@ -659,14 +700,15 @@ app.post('/verificar-codigo', (req, res) => {
 
 
 
-/// Endpoint para solicitar nombre, apellido, número de teléfono y correo electrónico
-app.post('/ValidacionCorreo', async(req, res) => {
+// Endpoint para solicitar nombre, apellido, número de teléfono y correo electrónico
+app.post('/ValidacionCorreo', async (req, res) => {
     const { nombre, apellido, telefono, correo } = req.body;
 
     // Verificar si se proporcionaron todos los campos requeridos
     if (!nombre || !apellido || !telefono || !correo) {
         return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
+    
 
     // Establecer conexión a la base de datos
     const pool = await getConnection();
@@ -676,15 +718,17 @@ app.post('/ValidacionCorreo', async(req, res) => {
         if (pool) {
             // Consulta SQL para insertar datos en la tabla UsuarioVal
             const query = `
-                INSERT INTO UsuarioVal (Nombre, Apellido, Correo_empresa, Telefono)
-                VALUES ('${nombre}', '${apellido}', '${correo}', '${telefono}')
-            `;
-
+               
+            
+            INSERT INTO [dbo].[UsuarioVal] ([Nombre], [Apellido], [Correo_Empresa], [Telefono])
+             VALUES ('${nombre}', '${apellido}', '${correo}', '${telefono}')
+             `;
             // Ejecutar la consulta
             await pool.request().query(query);
 
+            
             // Enviar respuesta de éxito
-            return res.status(200).json({ message: 'Datos guardados en la base de datos con éxito' });
+            return res.status(200).json({ message: 'Datos guardados en la base de datos y correo de validación enviado con éxito' });
         } else {
             // Si la conexión no se estableció, enviar error
             return res.status(500).json({ error: 'Error en la conexión a la base de datos' });
@@ -696,7 +740,24 @@ app.post('/ValidacionCorreo', async(req, res) => {
     } finally {
         // Cerrar la conexión a la base de datos
         pool.close();
-    }
+    
+
+    // Enviar correo electrónico de validación
+    const mailOptions = {
+        from: 'jose.baez@sosya.cl',
+        to: correo,
+        subject: 'Código de Verificación',
+        text: `¡Tu información ha sido validada con éxito! Puedes acceder a la firma desde el siguiente enlace: http://192.168.222.100:3000/solicitar-codigo`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error('Error al enviar el correo de validación:', error);
+        } else {
+            console.log('Correo de validación enviado:', info.response);
+        }
+    });
+}
 });
 
 
