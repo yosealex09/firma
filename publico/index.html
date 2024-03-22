@@ -23,9 +23,8 @@
             width: 100%;
         }
 
-        
-       /* Estilos para la lista de archivos PDF */
-       #pdfListContainer {
+        /* Estilos para la lista de archivos PDF */
+        #pdfListContainer {
             width: 90%;
             max-width: 900px;
             margin: 20px auto;
@@ -39,13 +38,13 @@
         }
 
         #titleContainer {
-            text-align: center; /* Alinea el texto al centro */
-            grid-column: span 2; /* Estira el contenedor del título para ocupar dos columnas */
-         }
+            text-align: center;
+            grid-column: span 2;
+        }
 
         #titleContainer h2 {
-            margin-top: 0; /* Elimina el margen superior para el título */
-        }   
+            margin-top: 0;
+        }
 
         .pdf-link {
             display: block;
@@ -57,9 +56,7 @@
             transition: background-color 0.3s ease;
         }
 
-                       
-
-        .pdf-btn:hover {
+        .pdf-link:hover {
             background-color: #45a049;
         }
 
@@ -107,27 +104,6 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             font-family: "Arial", sans-serif;
-
-
-        }/* Estilos para campos de formulario */
-        .form-control {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-
-        input[type="text"],
-        input[type="email"] {
-            width: 95%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: "Arial", sans-serif;
         }
 
         /* Estilos para botones */
@@ -138,7 +114,7 @@
             border: none;
             border-radius: 15px;
             cursor: pointer;
-            margin-top: 10px; /* Agrega un margen arriba de los botones */
+            margin-top: 10px;
         }
 
         button:hover {
@@ -156,166 +132,196 @@
         /* Estilos para los botones de Cancelar y Siguiente */
         #botones-final {
             width: 100%;
-            text-align: center; /* Centra los botones horizontalmente */
-            margin-top: 20px; /* Espacio arriba de los botones */
+            text-align: center;
+            margin-top: 20px;
         }
 
         #cancelar,
         #siguiente,
         #firmar {
-            width: 200px; /* Ajusta el ancho de los botones */
-            padding: 15px 30px; /* Ajusta el espacio interno de los botones */
-            font-size: 18px; /* Ajusta el tamaño del texto */
-            margin: 10px; /* Espacio entre los botones */
+            width: 200px;
+            padding: 15px 30px;
+            font-size: 18px;
+            margin: 10px;
         }
     </style>
 </head>
 <body>
  
-    <h1>Firma de Documentos</h1>
+<h1>Firma de Documentos</h1>
 
-    <!-- Lista de archivos PDF -->
-    <div id="pdfListContainer">
-        <div id="titleContainer">
-            <h2>Lista de Documentos por Firmar</h2>
-            <h6>Selecciona el documento que quieras revisar antes de firmar</h6>
+<!-- Lista de archivos PDF -->
+<div id="pdfListContainer">
+    <div id="titleContainer">
+        <h2>Lista de Documentos por Firmar</h2>
+        <h6>Selecciona el documento que quieras revisar antes de firmar</h6>
+    </div>
+    <ol id="pdfList" style="list-style-type: decimal;"></ol>
+</div>
+
+<!-- Contenedor para mostrar el PDF -->
+<div id="pdfContainer" style="display: none;">
+    <iframe id="pdfViewer" src="" width="100%" height="500px" frameborder="0"></iframe>
+</div>
+
+<!-- Formulario de firma -->
+<div id="pdfForm">
+    <h2>Ingresar Datos de Firma</h2>
+    <form id="guardarCorreoForm" action="/guardar-correo" method="POST">
+        <div class="form-control">
+            <label for="nombre">Nombre Completo:</label>
+            <input type="text" id="nombre" name="nombre" required>
         </div>
-        <ol id="pdfList" style="list-style-type: decimal;"></ol>
-    </div>
+        <div class="form-control">
+            <label for="rut">RUT:</label>
+            <input type="text" id="rut" name="rut" maxlength="12" placeholder="Ejemplo: 12.345.646-8" required>
+        </div>
+        <div class="form-control">
+            <label for="email">Correo Electrónico:</label>
+            <input type="email" id="email" id="email" name="email" required>
+        </div>
+        <button type="submit" id="convertirFormulario" id="guardarCorreoForm">Crear Firma</button> 
+        <button type="button" id="firmarDocumento">Firmar Documento</button>
+        <div id="message"></div>
+    </form>
+</div>
+
+
+
+<!-- Botones de Cancelar, Siguiente y Firmar -->
+<div id="botones-final">
+    <!-- Contenido omitido por brevedad -->
+    <form action="/enviar-correo" method="POST" enctype="multipart/form-data">
+        <button type="submit">Enviar Correo</button>
+    </form>
     
+</div>
 
-    <!-- Contenedor para mostrar el PDF -->
-    <div id="pdfContainer" style="display: none;">
-        <iframe id="pdfViewer" src="" width="100%" height="500px" frameborder="0"></iframe>
-    </div>
+<div id="message"></div>
 
-    <!-- Formulario de firma -->
-    <div id="pdfForm">
-        <h2>Ingresar Datos de Firma</h2>
-        <form id="registroForm">
-            <div class="form-control">
-                <label for="nombre">Nombre Completo:</label>
-                <input type="text" id="nombre" name="nombre" required>
-            </div>
-            <div class="form-control">
-                <label for="rut">RUT:</label>
-                <input type="text" id="rut" name="rut" maxlength="12" placeholder="Ejemplo: 12.345.646-8" required>
-            </div>
-            <div class="form-control">
-                <label for="email">Correo Electrónico:</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <button type="button" id="convertirFormulario">Crear Firma</button> 
-            <button type="button" id="firmarDocumento">Firmar Documento</button>
-            <div id="message"></div>
-        </form>
-    </div>
+<script>
 
-    <!-- Botones de Cancelar, Siguiente y Firmar -->
-    <div id="botones-final">
-        
-        <button type="button" id="siguiente">Siguiente</button>
-    </div>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('guardarCorreoForm');
+        const message = document.getElementById('message');
 
-    <div id="message"></div>
-
-    <script>
-       document.addEventListener('DOMContentLoaded', async () => {
-            const pdfListContainer = document.getElementById('pdfList');
-            const pdfContainer = document.getElementById('pdfContainer');
-            const pdfViewer = document.getElementById('pdfViewer');
-
-            // Obtener lista de archivos PDF en la carpeta 'publico'
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(form);
             try {
-                const response = await fetch('/lista-pdf');
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: formData
+                });
                 if (response.ok) {
-                    const pdfFiles = await response.json();
-                    pdfFiles.forEach((pdfFile, index) => {
-                        const pdfLink = document.createElement('a');
-                        pdfLink.classList.add('pdf-link');
-                        pdfLink.textContent = pdfFile;
-                        pdfLink.href = '#';
-                        pdfLink.addEventListener('click', async () => {
-                            pdfContainer.style.display = 'block';
-                            pdfViewer.src = `/publico/${pdfFile}`;
-                        });
-                        const listItem = document.createElement('li');
-                        listItem.appendChild(pdfLink);
-                        pdfListContainer.appendChild(listItem);
-                    });
+                    message.textContent = 'Formulario enviado correctamente.';
+                    message.style.color = 'green';
+                    form.reset();
                 } else {
-                    console.error('Error al obtener la lista de archivos PDF');
+                    message.textContent = 'Error al enviar el formulario.';
+                    message.style.color = 'red';
                 }
             } catch (error) {
-                console.error('Error de red:', error);
+                console.error(error);
+                message.textContent = 'Error al enviar el formulario.';
+                message.style.color = 'red';
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const pdfListContainer = document.getElementById('pdfList');
+        const pdfContainer = document.getElementById('pdfContainer');
+        const pdfViewer = document.getElementById('pdfViewer');
+
+        // Obtener lista de archivos PDF en la carpeta 'publico'
+        try {
+            const response = await fetch('/lista-pdf');
+            if (response.ok) {
+                const pdfFiles = await response.json();
+                pdfFiles.forEach((pdfFile, index) => {
+                    const pdfLink = document.createElement('a');
+                    pdfLink.classList.add('pdf-link');
+                    pdfLink.textContent = pdfFile;
+                    pdfLink.href ='#';
+                    pdfLink.addEventListener('click', async () => {
+                        pdfContainer.style.display = 'block';
+                        pdfViewer.src = `/publico/${pdfFile}`;
+                    });
+                    const listItem = document.createElement('li');
+                    listItem.appendChild(pdfLink);
+                    pdfListContainer.appendChild(listItem);
+                });
+            } else {
+                console.error('Error al obtener la lista de archivos PDF');
+            }
+        } catch (error) {
+            console.error('Error de red:', error);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const pdfForm = document.getElementById('pdfForm');
+        const messageDiv = document.getElementById('message');
+        const firmarDocumentoBtn = document.getElementById('firmarDocumento');
+        const siguienteBtn = document.getElementById('siguiente');
+
+        firmarDocumentoBtn.disabled = true;
+        siguienteBtn.disabled = true;
+
+        document.getElementById('convertirFormulario').addEventListener('click', async () => {
+            const nombre = document.getElementById('nombre').value;
+            const rut = document.getElementById('rut').value;
+            const email = document.getElementById('email').value;
+
+            try {
+                const response = await fetch('/formulario', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nombre, rut, email })
+                });
+
+                if (response.ok) {
+                    const data = await response.text();
+                    messageDiv.textContent = data;
+                    document.getElementById('nombre').value = '';
+                    document.getElementById('rut').value = '';
+                    document.getElementById('email').value = '';
+                    firmarDocumentoBtn.disabled = false;
+                    siguienteBtn.disabled = false;
+                } else {
+                    const errorMessage = await response.text();
+                    messageDiv.textContent = errorMessage || 'Error al procesar el formulario';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.textContent = 'Error al conectar con el servidor';
             }
         });
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const pdfForm = document.getElementById('pdfForm');
-            const messageDiv = document.getElementById('message');
-            const firmarDocumentoBtn = document.getElementById('firmarDocumento');
-            const siguienteBtn = document.getElementById('siguiente');
+        document.getElementById('firmarDocumento').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/firmar-pdf', {
+                    method: 'POST'
+                });
 
-            firmarDocumentoBtn.disabled = true;
-            siguienteBtn.disabled = true;
+                const data = await response.json();
 
-            document.getElementById('convertirFormulario').addEventListener('click', async () => {
-                const nombre = document.getElementById('nombre').value;
-                const rut = document.getElementById('rut').value;
-                const email = document.getElementById('email').value;
-
-                try {
-                    const response = await fetch('http://192.168.222.100:3000/formulario', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ nombre, rut, email })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.text();
-                        messageDiv.textContent = data;
-                        document.getElementById('nombre').value = '';
-                        document.getElementById('rut').value = '';
-                        document.getElementById('email').value = '';
-                        firmarDocumentoBtn.disabled = false;
-                        siguienteBtn.disabled = false;
-                    } else {
-                        const errorMessage = await response.text();
-                        messageDiv.textContent = errorMessage || 'Error al procesar el formulario';
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    messageDiv.textContent = 'Error al conectar con el servidor';
+                if (response.ok) {
+                    messageDiv.textContent = data.message;
+                } else {
+                    messageDiv.textContent = data.error || 'Error al firmar el PDF';
                 }
-            });
-
-            document.getElementById('firmarDocumento').addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/firmar-pdf', {
-                        method: 'POST'
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        messageDiv.textContent = data.message;
-                    } else {
-                        messageDiv.textContent = data.error || 'Error al firmar el PDF';
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    messageDiv.textContent = 'Error al conectar con el servidor';
-                }
-            });
-
-            document.getElementById('siguiente').addEventListener('click', () => {
-                // Cambiar la ubicación de la página
-                window.location.href = 'http://192.168.222.100:3000';
-            });
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.textContent = 'Error al conectar con el servidor';
+            }
         });
-    </script>
+
+                
+    });
+</script>
 </body>
 </html>

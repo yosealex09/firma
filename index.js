@@ -25,9 +25,6 @@ const validationCodes = new Map();
 
 
 
-
-
-
 // Configurar EJS como motor de vista
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -203,21 +200,52 @@ function cargarUsuariosDesdeJSON() {
         return []; // Retorna un arreglo vacío en caso de error
     }
 }
-let para = '';
+
+
+
+
+
+// POST /guardar-correo
+
+app.post('/guardar-correo', (req, res) => {
+    const { email } = req.body;
+    const ip = getLocalIpAddress();
+
+    // Inicializar correoYIP si no está definido en la sesión
+    req.session.correoYIP = req.session.correoYIP || {};
+
+    // Almacenar el correo y la IP en la sesión
+    req.session.correoYIP.email = correoYIPemail;
+    req.session.correoYIP.ip = ip;
+
+    console.log(`Correo guardado correctamente: ${req.session.correoYIP.email}`);
+    res.send('Correo guardado correctamente');
+});
+
 // POST /enviar-correo
-app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
-    const { para, asunto, mensaje } = req.body;
-    const adjunto = req.file;
+app.post('/enviar-correo', async (req, res) => {
     
+    // Obtener el correo y la IP almacenados en la sesión
+    const email = req.session.correoYIP.email;
+    const ip = req.session.correoYIP.ip;
+
+    if (!email || !ip) {
+        return res.status(400).send('No se ha guardado ningún correo previamente.');
+    }
+    
+    // Obtener los datos del formulario
+    const { asunto, mensaje } = req.body;
+
+    // Comprobar si la dirección IP coincide
+    const localIpAddress = getLocalIpAddress();
+    if (localIpAddress !== ip) {
+        return res.status(400).send('La dirección IP no coincide.');
+    }
 
     console.log('Solicitud POST recibida. Datos del formulario:');
-    console.log('Para:', para);
+    console.log('Para:', email);
     console.log('Asunto:', asunto);
     console.log('Mensaje:', mensaje);
-
-    // Obtener la dirección IP local del equipo actual
-    const ipAddress = getLocalIpAddress();
-    console.log('Dirección IP local:', ipAddress);
 
     // Ruta de la carpeta que contiene los documentos firmados
     const folderPath = path.join(__dirname, 'Doc_firmado');
@@ -232,14 +260,12 @@ app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
 
         console.log('Archivos encontrados en la carpeta de documentos firmados:', files);
 
-
-       
         try {
             // Configurar las opciones del correo electrónico
             const mailOptions = {
                 from: 'jose.baez@sosya.cl',
-                to: para,
-                subject: 'Contrato Firmado',
+                to: email,
+                subject: 'Documentos Firmados',
                 html: `<p>${mensaje}</p><p>Adjunto encontrarás el archivo: ContratoFirmado.pdf</p>`,
                 attachments: files.map(file => ({
                     filename: file,
@@ -253,6 +279,9 @@ app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
             // Enviar el correo electrónico
             const info = await transporter.sendMail(mailOptions);
             console.log('Correo enviado:', info.response);
+
+            
+            // Enviar respuesta de éxito
             res.send('Correo enviado correctamente');
         } catch (error) {
             console.error('Error al enviar el correo:', error);
@@ -260,6 +289,7 @@ app.post('/enviar-correo', upload.single('adjunto'), async (req, res) => {
         }
     });
 });
+
 
 
 // Función para obtener la dirección IP local del equipo actual
@@ -362,6 +392,7 @@ app.get('/formulario', (req, res) => {
 
 
 let nombreFormulario = '';
+let correoYIPemail = "";
 
 // POST /formulario
 app.post('/formulario', async (req, res) => {
@@ -388,6 +419,7 @@ app.post('/formulario', async (req, res) => {
 
 
     nombreFormulario = nombre;
+    correoYIPemail = email;
     // Convertir el formulario a imagen
     try {
         const nombreFormulario = await convertirFormulario(nombre, rut, email);
