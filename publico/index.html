@@ -156,13 +156,16 @@
         <h2>Lista de Documentos por Firmar</h2>
         <h6>Selecciona el documento que quieras revisar antes de firmar</h6>
     </div>
-    <ol id="pdfList" style="list-style-type: decimal;"></ol>
+    <ol type="checkbox" lass="documentCheckbox" id="pdfList" style="list-style-type: decimal;">
 </div>
 
 <!-- Contenedor para mostrar el PDF -->
 <div id="pdfContainer" style="display: none;">
+    <input type="checkbox" id="togglePDFViewer">
+    <label for="togglePDFViewer" style="cursor: pointer;"></label>
     <iframe id="pdfViewer" src="" width="100%" height="500px" frameborder="0"></iframe>
 </div>
+
 
 <!-- Formulario de firma -->
 <div id="pdfForm">
@@ -230,35 +233,61 @@
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
-        const pdfListContainer = document.getElementById('pdfList');
-        const pdfContainer = document.getElementById('pdfContainer');
-        const pdfViewer = document.getElementById('pdfViewer');
+    const pdfListContainer = document.getElementById('pdfList');
+    const pdfContainer = document.getElementById('pdfContainer');
+    const pdfViewer = document.getElementById('pdfViewer');
 
-        // Obtener lista de archivos PDF en la carpeta 'publico'
-        try {
-            const response = await fetch('/lista-pdf');
-            if (response.ok) {
-                const pdfFiles = await response.json();
-                pdfFiles.forEach((pdfFile, index) => {
-                    const pdfLink = document.createElement('a');
-                    pdfLink.classList.add('pdf-link');
-                    pdfLink.textContent = pdfFile;
-                    pdfLink.href ='#';
-                    pdfLink.addEventListener('click', async () => {
-                        pdfContainer.style.display = 'block';
-                        pdfViewer.src = `/publico/${pdfFile}`;
-                    });
-                    const listItem = document.createElement('li');
-                    listItem.appendChild(pdfLink);
-                    pdfListContainer.appendChild(listItem);
+    // Obtener lista de archivos PDF en la carpeta 'publico'
+    try {
+        const response = await fetch('/lista-pdf');
+        if (response.ok) {
+            const pdfFiles = await response.json();
+            pdfFiles.forEach((pdfFile, index) => {
+                const pdfLink = document.createElement('a');
+                pdfLink.classList.add('pdf-link');
+                pdfLink.textContent = pdfFile;
+                pdfLink.href ='#';
+                pdfLink.addEventListener('click', async () => {
+                    pdfContainer.style.display = 'block';
+                    pdfViewer.src = `/publico/${pdfFile}`;
                 });
-            } else {
-                console.error('Error al obtener la lista de archivos PDF');
-            }
-        } catch (error) {
-            console.error('Error de red:', error);
+
+                // Crear checkbox para cada documento
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `documentCheckbox${index}`;
+                checkbox.classList.add('documentCheckbox');
+                checkbox.value = pdfFile;
+                
+                // Agregar evento de escucha al checkbox
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        // Realizar acciones cuando el checkbox está marcado
+                        console.log(`Documento seleccionado: ${pdfFile}`);
+                    } else {
+                        // Realizar acciones cuando el checkbox está desmarcado
+                        console.log(`Documento deseleccionado: ${pdfFile}`);
+                    }
+                });
+
+                // Crear etiqueta de texto para el checkbox
+                const label = document.createElement('label');
+               
+
+                // Crear elemento de la lista y adjuntar checkbox y enlace al documento
+                const listItem = document.createElement('li');
+                listItem.appendChild(pdfLink);
+                listItem.appendChild(checkbox);
+                listItem.appendChild(label);
+                pdfListContainer.appendChild(listItem);
+            });
+        } else {
+            console.error('Error al obtener la lista de archivos PDF');
         }
-    });
+    } catch (error) {
+        console.error('Error de red:', error);
+    }
+});
 
     document.addEventListener('DOMContentLoaded', () => {
         const pdfForm = document.getElementById('pdfForm');
@@ -266,8 +295,7 @@
         const firmarDocumentoBtn = document.getElementById('firmarDocumento');
         const siguienteBtn = document.getElementById('siguiente');
 
-        firmarDocumentoBtn.disabled = true;
-        siguienteBtn.disabled = true;
+        
 
         document.getElementById('convertirFormulario').addEventListener('click', async () => {
             const nombre = document.getElementById('nombre').value;
@@ -297,7 +325,7 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                messageDiv.textContent = 'Error al conectar con el servidor';
+                
             }
         });
 
