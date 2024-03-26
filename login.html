@@ -66,6 +66,30 @@
         button[type="submit"]:hover {
             background-color: #45a049;
         }
+        
+        #crearCuentaBtn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 15%;
+            font-size: 16px;
+        }
+
+        button[type="submit"]:hover,
+        #crearCuentaBtn:hover {
+            background-color: #45a049;
+        }
+
+        #crearCuentaBtn {
+            background-color: #008CBA;
+        }
+
+        #crearCuentaBtn:hover {
+            background-color: #005F6B;
+        }
     </style>
 </head>
 <body>
@@ -78,6 +102,9 @@
             <input type="password" id="password" name="password" required>
             <button type="submit">Iniciar Sesión</button>
         </form>
+    </div>
+    <div>
+        <button id="crearCuentaBtn" style="position: fixed; top: 0; left: 0; margin: 10px;">Crear Cuenta</button>
     </div>
 
     <script>
@@ -104,6 +131,9 @@
             } catch (error) {
                 console.error('Error al enviar la solicitud:', error);
             }
+        });
+        document.getElementById('crearCuentaBtn').addEventListener('click', () => {
+            window.location.href = '/registro'; // Redirigir a la página de creación de cuenta
         });
     </script>
 </body>

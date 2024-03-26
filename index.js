@@ -34,6 +34,12 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+// Configurar el motor de plantillas EJS
+app.set('view engine', 'ejs');
+
+
+
 
 
 // Configurar middleware de sesiones
@@ -601,58 +607,49 @@ app.get('/dashboard', (req, res) => {
     res.sendFile(__dirname + '/dashboard.html');
 });
 
-// POST /login
-app.post('/login', (req, res) => {
+
+
+// POST /login: Validar las credenciales de inicio de sesión
+app.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    // Aquí deberías autenticar al usuario y verificar las credenciales
-    // Si la autenticación es exitosa, puedes responder con un código 200
-    // Si la autenticación falla, puedes responder con un código 401 (No autorizado) o 403 (Prohibido)
-    // Ejemplo simple:
-    if (email === 'usuario@example.com' && password === 'contraseña') {
-        // Autenticación exitosa
-        req.session.user = email; // Establecer una sesión para indicar que el usuario está autenticado
-        res.redirect('/dashboard'); // Redirigir al usuario al dashboard
-    } else {
-        res.sendStatus(401); // Credenciales incorrectas
+
+    try {
+        // Establecer conexión a la base de datos
+        const pool = await getConnection();
+
+        // Consulta SQL para verificar las credenciales del usuario
+        const query = `SELECT * FROM Usuario WHERE Correo = @email`;
+        const request = pool.request();
+        request.input('email', sql.VarChar, email);
+
+        // Ejecutar la consulta SQL
+        const result = await request.query(query);
+
+        // Verificar si se encontró un usuario con el correo electrónico proporcionado
+        if (result.recordset.length === 0) {
+            return res.status(401).send('Correo electrónico no registrado');
+        }
+
+        // Comparar la contraseña proporcionada con la contraseña almacenada en la base de datos
+        const user = result.recordset[0];
+        if (user.Contraseña !== password) {
+            return res.status(401).send('Contraseña incorrecta');
+        }
+
+        // Las credenciales son válidas, puedes iniciar sesión
+        req.session.user = {
+            id: user.Usuario_id,
+            nombre: user.Nombre_Usuario,
+            email: user.Correo
+            // Puedes incluir más información del usuario si es necesario
+        };
+
+        res.redirect('/perfil'); // Redirigir al perfil del usuario después de iniciar sesión
+    } catch (error) {
+        console.error('Error al validar las credenciales de inicio de sesión:', error);
+        res.status(500).send('Error interno del servidor');
     }
 });
-
-// POST /solicitar-codigo
-app.post('/solicitar-codigo', async (req, res) => {
-    const { email } = req.body;
-    console.log('Correo electrónico del destinatario:', email);
-
-    // Generar un código de verificación aleatorio de 4 dígitos
-    const codigoVerificacion = Math.floor(1000 + Math.random() * 9000);
-    console.log(`Código de verificación generado para ${email}: ${codigoVerificacion}`);
-
-    validationCodes.set(email, codigoVerificacion);
-
-    // Aquí deberías enviar el código de verificación al correo electrónico del usuario
-    // Puedes utilizar nodemailer u otro servicio para enviar correos electrónicos
-    
-    const mailOptions = {
-        from: 'jose.baez@sosya.cl',
-        to: email,
-        subject: 'Código de Verificación',
-        text: `Su código de verificación es: ${codigoVerificacion}`
-    };
-
-    // Enviar el correo electrónico
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.error('Error al enviar el correo:', error);
-            return res.status(500).send('Error al enviar el correo');
-        } else {
-            console.log('Correo de verificación enviado:', info.response);
-            // Envía una respuesta al cliente indicando que se ha enviado el código de verificación
-            res.status(200).send('Código de verificación enviado al correo electrónico.');
-        }
-    });
-});
-
-
-
 
   //Ruta protegida que requiere código de validación
   app.post('/ruta-protegida', validateCode, (req, res) => {
@@ -760,7 +757,7 @@ app.post('/ValidacionCorreo', async (req, res) => {
 
             
             // Enviar respuesta de éxito
-            return res.status(200).json({ message: 'Datos guardados en la base de datos y correo de validación enviado con éxito' });
+            return res.status(200).json({ message: 'Datos validados con éxito, revise su bandeja de entrada en su correo ingresado' });
         } else {
             // Si la conexión no se estableció, enviar error
             return res.status(500).json({ error: 'Error en la conexión a la base de datos' });
@@ -779,7 +776,7 @@ app.post('/ValidacionCorreo', async (req, res) => {
         from: 'jose.baez@sosya.cl',
         to: correo,
         subject: 'Código de Verificación',
-        text: `¡Tu información ha sido validada con éxito! Puedes acceder a la firma desde el siguiente enlace: http://192.168.222.100:3000/solicitar-codigo`
+        text: `¡Tu información ha sido validada con éxito! Puedes acceder a la firma desde el siguiente enlace: http://localhost:3000/solicitar-codigo`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -816,6 +813,73 @@ app.get('/lista-pdf', (req, res) => {
 
 
 
+app.get('/perfil', (req, res) => {
+    // Verificar si el usuario está autenticado
+    if (!req.session.user) {
+        // Si el usuario no está autenticado, redirigirlo al inicio de sesión
+        return res.redirect('/login');
+    }
+
+    // Renderizar la vista del perfil y pasar los datos del usuario a la plantilla
+    res.render('perfil', { user: req.session.user });
+});
+
+app.post('/perfil', (req, res) => {
+    // Verificar si el usuario está autenticado
+    if (!req.session.user) {
+        // Si el usuario no está autenticado, redirigirlo al inicio de sesión
+        return res.redirect('/login');
+    }
+
+    // Supongamos que estás utilizando algún middleware para parsear el cuerpo de la solicitud
+    const { nombre, email, newPassword } = req.body;
+
+    // Aquí podrías realizar la lógica para actualizar el perfil del usuario en la base de datos
+    // Por simplicidad, aquí solo mostraremos los datos recibidos en la consola
+    console.log('Datos del perfil actualizados:');
+    console.log('Nombre de usuario:', nombre);
+    console.log('Correo electrónico:', email);
+    console.log('Nueva contraseña:', newPassword);
+
+    // Actualizar los datos del usuario en la sesión
+    req.session.user.username = nombre;
+    req.session.user.email = email;
+
+    // Redirigir al usuario de nuevo a la página de perfil
+    res.redirect('/perfil');
+});
+
+
+// GET: Renderiza la vista de registro
+app.get('/registro', (req, res) => {
+    res.render('registro');
+});
+// Endpoint para registrar un nuevo usuario
+app.post('/registro', async (req, res) => {
+    // Extraer los datos del formulario de registro
+    const { nombre, email, password } = req.body;
+  
+    try {
+      // Obtener el pool de conexión
+      const pool = await getConnection();
+  
+      // Consulta SQL para insertar el nuevo usuario en la base de datos
+      const query = `
+        INSERT INTO Usuario (Nombre_Usuario, Contraseña, Correo)
+        VALUES ('${nombre}', '${password}', '${email}')
+      `;
+  
+      // Ejecutar la consulta SQL para insertar el usuario
+      const result = await pool.request().query(query);
+      console.log('Nuevo usuario registrado en la base de datos:', result);
+  
+      res.redirect('/login'); // Redirigir al usuario a la página de inicio de sesión después de registrar
+    } catch (error) {
+      console.error('Error al registrar el nuevo usuario en la base de datos:', error);
+      res.status(500).send('Error interno del servidor');
+    }
+  });
+  
 
 
 // Puerto en el que se ejecutará el servidor

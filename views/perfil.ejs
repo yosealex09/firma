@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Usuario</title>
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* Estilos del menú de navegación */
+        .menu {
+            background-color: #333;
+            overflow: hidden;
+            width: 100%;
+            position: fixed;
+            top: 0;
+        }
+        
+        .menu a {
+            display: inline-block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        
+        .menu a:hover {
+            background-color: #555;
+        }
+        
+        .logout-btn {
+            float: right;
+            padding: 14px 16px;
+            color: white;
+            background-color: #d9534f;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background-color: #c9302c;
+        }
+        
+        /* Estilos del contenido */
+        .content {
+            padding-top: 60px; /* Para compensar la altura del menú */
+            text-align: center;
+        }
+        
+        .profile-info {
+            margin-bottom: 40px;
+        }
+        
+        .profile-info h1 {
+            margin-top: 0;
+        }
+        
+        .profile-actions {
+            margin-top: 40px;
+        }
+        
+        .profile-actions h2 {
+            margin-bottom: 10px;
+        }
+        
+        .profile-actions a {
+            display: block;
+            margin-bottom: 10px;
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .profile-actions a:hover {
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        <nav>
+            <a href="http://localhost:3000/dashboard">Inicio</a>
+            <a href="http://localhost:3000/perfil">Perfil</a>
+            <a href="http://localhost:3000/publico/">Documentos a Firmar</a>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </nav>
+    </div>
+    <div class="content">
+        <main>
+            <section class="profile-info">
+                <h1>Bienvenido, <%= user.username %></h1>
+                <h2>Información del Perfil</h2>
+                <p><strong>Nombre:</strong> <%= user.nombre %></p>
+                <p><strong>Correo Electrónico:</strong> <%= user.email %></p>
+                <!-- Puedes mostrar más información del perfil aquí -->
+            </section>
+            <section class="profile-actions">
+                <h2>Acciones</h2>
+                <a href="/perfil/editar">Editar Perfil</a>
+                <!-- Puedes agregar más enlaces de acciones según sea necesario -->
+            </section>
+        </main>
+    </div>
+    <footer>
+        <!-- Pie de página -->
+    </footer>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Función para cerrar sesión
+        function logout() {
+            // Aquí puedes agregar el código para cerrar sesión, por ejemplo, redireccionar a la página de inicio de sesión
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>
