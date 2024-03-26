@@ -95,7 +95,7 @@
                     const data = await response.json();
                     document.getElementById('verificationResult').textContent = `${data.message}. Correo electrónico: ${data.email}`;
                     // Redirigir a otra página
-                    window.location.href = 'http://192.168.222.100:3000/formulario';
+                    window.location.href = '/formulario';
                 } else {
                     const errorMessage = await response.text();
                     document.getElementById('verificationResult').textContent = errorMessage || 'Error al validar el código';
