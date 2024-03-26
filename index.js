@@ -726,6 +726,41 @@ app.post('/verificar-codigo', (req, res) => {
     }
 });
 
+// POST /solicitar-codigo
+app.post('/solicitar-codigo', async (req, res) => {
+    const { email } = req.body;
+    console.log('Correo electrónico del destinatario:', email);
+
+    // Generar un código de verificación aleatorio de 4 dígitos
+    const codigoVerificacion = Math.floor(1000 + Math.random() * 9000);
+    console.log(`Código de verificación generado para ${email}: ${codigoVerificacion}`);
+
+    validationCodes.set(email, codigoVerificacion);
+
+    // Aquí deberías enviar el código de verificación al correo electrónico del usuario
+    // Puedes utilizar nodemailer u otro servicio para enviar correos electrónicos
+    
+    const mailOptions = {
+        from: 'jose.baez@sosya.cl',
+        to: email,
+        subject: 'Código de Verificación',
+        text: `Su código de verificación es: ${codigoVerificacion}`
+    };
+
+    // Enviar el correo electrónico
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error('Error al enviar el correo:', error);
+            return res.status(500).send('Error al enviar el correo');
+        } else {
+            console.log('Correo de verificación enviado:', info.response);
+            // Envía una respuesta al cliente indicando que se ha enviado el código de verificación
+            res.status(200).send('Código de verificación enviado al correo electrónico.');
+        }
+    });
+});
+
+
 
 
 

@@ -92,7 +92,7 @@
                     document.getElementById('messageDiv').textContent = data;
                     // Redirigir al usuario a otra página después de 2 segundos
                     setTimeout(() => {
-                        window.location.href = 'http://192.168.222.100:3000/verificar-codigo';
+                        window.location.href = '/verificar-codigo';
                     }, 2000);
                 } else {
                     const errorMessage = await response.text();
